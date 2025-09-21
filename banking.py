@@ -36,7 +36,7 @@ class BankAccount:
           
     def log_Account(self, accounts_list):
         account_id = int(
-            input("Welcome back! Please enter your ID number to log in: "))
+            input("Welcome! Please enter your ID number to log in: "))
         password = input("Enter your password: ")
         account = find_account_by_id(account_id, accounts_list)
         if account and account.password == password:
@@ -89,7 +89,9 @@ if __name__ == "__main__":
             BankAccount(0, "", "", "").log_Account(accounts)
             break
         elif user_Account == "No":
-            BankAccount(0, "", "", "").new_Account(accounts)
+            new_acc = BankAccount(0, "", "", "").new_Account(accounts)
+            if new_acc:  
+                BankAccount(0, "", "", "").log_Account(accounts)
             break
         else:
             print("Please enter 'Yes' or 'No'.")

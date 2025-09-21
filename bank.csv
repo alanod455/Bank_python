@@ -14,3 +14,6 @@ id,first_name,last_name,password,checking,savings,active
 100013,HALAH,ALMESALAM,123123,0.0,0.0,True
 100014,Alanoud,Almarshad,123456789,0.0,0.0,True
 
+100015,majed,Almarshad,123,0.0,0.0,True
+100016,ahmad,alenezi,123,0.0,0.0,True
+100017,12,12,12,0.0,0.0,True
