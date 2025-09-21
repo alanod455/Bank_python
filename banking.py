@@ -1,4 +1,7 @@
 import csv
+from colorama import Style, Back
+from rich.console import Console
+from rich.progress import track
 
 bank_Data = "bank.csv"
 
@@ -18,7 +21,7 @@ def load_accounts_from_csv(bank_Data):
                 savings=float(
                     row['savings']) if row['savings'] != 'False' else 0.0,
                 active=row['active'].strip().lower() == 'true',
-             
+
             )
             accounts.append(account)
     return accounts
@@ -33,11 +36,14 @@ class BankAccount:
         self.checking = checking
         self.savings = savings
         self.active = active
-          
+
     def log_Account(self, accounts_list):
+
+        console = Console()
         account_id = int(
-            input("Welcome! Please enter your ID number to log in: "))
-        password = input("Enter your password: ")
+            console.input("Please enter your [bold green] ID number [/bold green]to Log In: "))
+        password = input(
+            Style.BRIGHT + "Enter your password: "+Style.RESET_ALL)
         account = find_account_by_id(account_id, accounts_list)
         if account and account.password == password:
             print(
@@ -48,30 +54,41 @@ class BankAccount:
             return None
 
     def new_Account(self, accounts_list, bank_Data=bank_Data):
-     while True:
-        response = input("Would you like to open a new account? (Yes/No): ").strip().capitalize()
-        if response == "Yes":
-            first_name = input("Please enter your First name: ")
-            last_name = input("Please enter your Last name: ")
-            password = input("Enter password: ")
-            new_id = max(acc.id for acc in accounts_list) + 1 if accounts_list else 1
+        while True:
+            response = input(
+                "Would you like to open a new account? (Yes/No): ").strip().capitalize()
+            if response == "Yes":
+                first_name = input("Please enter your First name: ")
+                last_name = input("Please enter your Last name: ")
+                password = input("Enter password: ")
+                import time
 
-            new_account = BankAccount(new_id, first_name, last_name, password)
-            accounts_list.append(new_account)
+                for step in track(range(10), description="[bold green]Create your Account[/bold green]"):
+                 time.sleep(0.2)
 
-            with open(bank_Data, "a", newline="", encoding="utf-8") as f:
-                writer = csv.writer(f)
-                writer.writerow([new_id, first_name, last_name, password, 0.0, 0.0, True])
+                new_id = max(acc.id for acc in accounts_list) + \
+                    1 if accounts_list else 1
 
-            print(f"Account created for {first_name}. Welcome to Green Bank! Your ID to log in is {new_id}")
-            return new_account
+                new_account = BankAccount(
+                    new_id, first_name, last_name, password)
+                accounts_list.append(new_account)
 
-        elif response == "No":
-            print("Okay, see you soon!")
-            return None
+                with open(bank_Data, "a", newline="", encoding="utf-8") as f:
+                    writer = csv.writer(f)
+                    writer.writerow(
+                        [new_id, first_name, last_name, password, 0.0, 0.0, True])
 
-        else:
-            print("Invalid input. Please enter 'Yes' or 'No'.")
+                print(
+                    f"Account created for {first_name}. Welcome to Green Bank! Your ID to log in is {new_id}")
+                return new_account
+
+            elif response == "No":
+                print("Okay, see you soon!")
+                return None
+
+            else:
+                print("Invalid input. Please enter 'Yes' or 'No'.")
+
 
 def find_account_by_id(account_id, accounts_list):
     for acc in accounts_list:
@@ -79,18 +96,22 @@ def find_account_by_id(account_id, accounts_list):
             return acc
     return None
 
+
 if __name__ == "__main__":
+
     accounts = load_accounts_from_csv(bank_Data)
 
-    print("Hello, welcome to Green Bank!")
+    print(Style.BRIGHT + Back.GREEN +
+          "Hello, welcome to Green Bank!" + Style.RESET_ALL)
     while True:
-        user_Account = input("Do you have an account in the bank? (Yes/No): ").strip().capitalize()
+        user_Account = input(
+            Style.RESET_ALL + "Do you have an account in the bank? (Yes/No): ").strip().capitalize()
         if user_Account == "Yes":
             BankAccount(0, "", "", "").log_Account(accounts)
             break
         elif user_Account == "No":
             new_acc = BankAccount(0, "", "", "").new_Account(accounts)
-            if new_acc:  
+            if new_acc:
                 BankAccount(0, "", "", "").log_Account(accounts)
             break
         else:
