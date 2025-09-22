@@ -1,118 +1,420 @@
 import csv
-from colorama import Style, Back
 from rich.console import Console
 from rich.progress import track
+import time
 
+console = Console()
 bank_Data = "bank.csv"
 
+# ---------------- CsvHandler ----------------class1
+class CsvHandler:
+    def __init__(self, file_path):
+        self.file_path = file_path
 
-def load_accounts_from_csv(bank_Data):
-    accounts = []
-    with open(bank_Data, newline='', encoding='utf-8') as csvfile:
-        reader = csv.DictReader(csvfile)
-        for row in reader:
-            account = BankAccount(
-                id=int(row['id']),
-                first_name=row['first_name'].strip(),
-                last_name=row['last_name'].strip(),
-                password=row['password'],
-                checking=float(
-                    row['checking']) if row['checking'] != 'False' else 0.0,
-                savings=float(
-                    row['savings']) if row['savings'] != 'False' else 0.0,
-                active=row['active'].strip().lower() == 'true',
+    def load_accounts(self):
+        accounts = []
+        try:
+            with open(self.file_path, newline='', encoding='utf-8') as csvfile:
+                reader = csv.DictReader(csvfile)
+                for row in reader:
+                    checking = None if row['checking'] == "None" else int(row['checking'])
+                    savings = None if row['savings'] == "None" else int(row['savings'])
+                    overdrafts = int(row.get('overdrafts', 0))
+                    active = row.get('active', "True") == "True"
+                    account = Customer(
+                        id=int(row['id']),
+                        first_name=row['first_name'],
+                        last_name=row['last_name'],
+                        password=row['password'],
+                        checking=checking,
+                        savings=savings,
+                        overdrafts=overdrafts,
+                        active=active
+                    )
+                    accounts.append(account)
+        except FileNotFoundError:
+            pass
+        return accounts
 
-            )
-            accounts.append(account)
-    return accounts
+    def save_all(self, accounts):
+        with open(self.file_path, "w", newline="", encoding="utf-8") as f:
+            writer = csv.DictWriter(f, fieldnames=['id', 'first_name', 'last_name', 'password', 'checking', 'savings','overdrafts','active'])
+            writer.writeheader()
+            for acc in accounts:
+                writer.writerow({
+                    'id': acc.id,
+                    'first_name': acc.first_name,
+                    'last_name': acc.last_name,
+                    'password': acc.password,
+                    'checking': acc.checking if acc.checking is not None else "None",
+                    'savings': acc.savings if acc.savings is not None else "None",
+                    'overdrafts': acc.overdrafts,
+                    'active': acc.active
+                })
 
-
-class BankAccount:
-    def __init__(self, id, first_name, last_name, password, checking=0.0, savings=0.0, active=True):
+# ---------------- Customer ----------------class2
+class Customer:
+    def __init__(self, id, first_name, last_name, password, checking=None, savings=None, overdrafts=0, active=True):
         self.id = id
         self.first_name = first_name
         self.last_name = last_name
         self.password = password
         self.checking = checking
         self.savings = savings
+        self.overdrafts = overdrafts
         self.active = active
+        self.transactions = []  
 
-    def log_Account(self, accounts_list):
+# ---------------- Transaction ---------------- class3
+class Transaction:
+    def __init__(self, type, amount, account_from=None, account_to=None):
+        self.type = type
+        self.amount = amount
+        self.account_from = account_from
+        self.account_to = account_to
+        self.time = time.strftime("%Y-%m-%d %H:%M:%S")
 
-        console = Console()
-        account_id = int(
-            console.input("Please enter your [bold green] ID number [/bold green]to Log In: "))
-        password = input(
-            Style.BRIGHT + "Enter your password: "+Style.RESET_ALL)
-        account = find_account_by_id(account_id, accounts_list)
-        if account and account.password == password:
-            print(
-                f"Login successful. Welcome {account.first_name} {account.last_name}!")
-            return account
+# ---------------- Bank ---------------- class4
+class Bank:
+    def __init__(self, csv_handler):
+        self.csv_handler = csv_handler
+        self.accounts = csv_handler.load_accounts()
+        self.curr_user = None
+
+    def find_id(self, account_id):
+        for acc in self.accounts:
+            if acc.id == account_id:
+                return acc
+        return None
+
+    def sign_in(self):
+        while True:
+            try:
+                account_id = int(console.input("Please enter your ID number to Log In: "))
+            except ValueError:
+                console.print("[bold red]Please enter a numeric ID.[/bold red]")
+                continue
+
+            password = console.input("Enter your password: ")
+            account = self.find_id(account_id)
+
+            if account and account.password == password:
+                if not account.active:
+                    print("⚠ Your account is deactivated due to overdraft. Please deposit funds to reactivate.")
+                self.curr_user = account
+                print(f"Login successful. Welcome {account.first_name} {account.last_name}!")
+                self.user_menu()
+                return
+            else:
+                console.print("[bold red]Wrong ID or password. Please try again.[/bold red]")
+
+    def show_account_info(self):
+        print("\nYour account balances:")
+        if self.curr_user.checking is not None:
+            print(f"Checking: ${self.curr_user.checking}")
         else:
-            print("Wrong ID or password.")
+            print("Checking: Not created yet")
+        if self.curr_user.savings is not None:
+            print(f"Savings: ${self.curr_user.savings}")
+        else:
+            print("Savings: Not created yet")
+        print("")
+
+    def create_account(self):
+        response = input("Would you like to create a new account? (Yes/No): ").strip().capitalize()
+        if response != "Yes":
+            print("Okay, see you soon!")
             return None
 
-    def new_Account(self, accounts_list, bank_Data=bank_Data):
+        first_name = input("Please enter your First name: ")
+        last_name = input("Please enter your Last name: ")
+        password = input("Enter password: ")
+
+        print("Select account type to create:")
+        print("1. Checking")
+        print("2. Savings")
+        print("3. Both")
+
         while True:
-            response = input(
-                "Would you like to open a new account? (Yes/No): ").strip().capitalize()
-            if response == "Yes":
-                first_name = input("Please enter your First name: ")
-                last_name = input("Please enter your Last name: ")
-                password = input("Enter password: ")
-                import time
+            account_type = input("Choose (1/2/3): ").strip()
+            if account_type in ["1", "2", "3"]:
+                break
+            console.print("[bold red]Please enter 1, 2, or 3.[/bold red]")
 
-                for step in track(range(10), description="[bold green]Create your Account[/bold green]"):
-                 time.sleep(0.2)
+        checking, savings = None, None
+        if account_type == "1":
+            checking = int(input("Enter initial deposit for Checking: "))
+        elif account_type == "2":
+            savings = int(input("Enter initial deposit for Savings: "))
+        elif account_type == "3":
+            checking = int(input("Enter initial deposit for Checking: "))
+            savings = int(input("Enter initial deposit for Savings: "))
 
-                new_id = max(acc.id for acc in accounts_list) + \
-                    1 if accounts_list else 1
+        for step in track(range(10), description="[bold green]Creating your Account[/bold green]"):
+            time.sleep(0.2)
 
-                new_account = BankAccount(
-                    new_id, first_name, last_name, password)
-                accounts_list.append(new_account)
+        new_id = max([acc.id for acc in self.accounts], default=0) + 1
+        new_account = Customer(new_id, first_name, last_name, password, checking, savings)
+        self.accounts.append(new_account)
+        self.csv_handler.save_all(self.accounts)
 
-                with open(bank_Data, "a", newline="", encoding="utf-8") as f:
-                    writer = csv.writer(f)
-                    writer.writerow(
-                        [new_id, first_name, last_name, password, 0.0, 0.0, True])
+        print(f"Account created for {first_name}. Your ID is {new_id}")
+        return new_account
 
-                print(
-                    f"Account created for {first_name}. Welcome to Green Bank! Your ID to log in is {new_id}")
-                return new_account
+    def add_missing_account(self):
+        if not self.curr_user:
+            console.print("[bold red]No user is logged in.[/bold red]")
+            return
 
-            elif response == "No":
-                print("Okay, see you soon!")
-                return None
+        options = {}
+        if self.curr_user.checking is None:
+            options["1"] = "Checking"
+        if self.curr_user.savings is None:
+            options["2"] = "Savings"
 
+        if not options:
+            print("You already have both Checking and Savings accounts.")
+            return
+
+        print("You can create the following missing account(s):")
+        for key, name in options.items():
+            print(f"{key}. {name}")
+
+        while True:
+            choice = input("Choose account to create: ").strip()
+            if choice in options:
+                break
+            console.print("[bold red]Invalid choice. Please try again.[/bold red]")
+
+        amount = int(input(f"Enter initial deposit for {options[choice]}: "))
+        if choice == "1":
+            self.curr_user.checking = amount
+        else:
+            self.curr_user.savings = amount
+
+        self.csv_handler.save_all(self.accounts)
+        print(f"{options[choice]} account created with ${amount}.")
+
+    def withdraw(self):
+        if not self.curr_user:
+            return
+        print("Which account to withdraw from?")
+        print("1. Checking")
+        print("2. Savings")
+        choice = input("Choose: ").strip()
+
+        if choice == "1" and self.curr_user.checking is None:
+            print("You don't have a Checking account.")
+            return
+        if choice == "2" and self.curr_user.savings is None:
+            print("You don't have a Savings account.")
+            return
+
+        amount = int(input("How much do you want to withdraw? "))
+        if amount > 100:
+            print("Cannot withdraw more than $100 in one transaction.")
+            return
+
+        if choice == "1":
+            new_balance = self.curr_user.checking - amount
+            if new_balance < -100:
+                print("Cannot overdraw more than $100 in Checking.")
+                return
+            self.curr_user.checking = new_balance
+        else:
+            new_balance = self.curr_user.savings - amount
+            if new_balance < -100:
+                print("Cannot overdraw more than $100 in Savings.")
+                return
+            self.curr_user.savings = new_balance
+
+        overdraft_occurred = False
+        if (choice == "1" and self.curr_user.checking < 0) or (choice == "2" and self.curr_user.savings < 0):
+            print("⚠ Overdraft! $35 fee applied.")
+            if choice == "1":
+                self.curr_user.checking -= 35
             else:
-                print("Invalid input. Please enter 'Yes' or 'No'.")
+                self.curr_user.savings -= 35
+            self.curr_user.overdrafts += 1
+            overdraft_occurred = True
 
+        if self.curr_user.overdrafts >= 2:
+            print("⚠ Your account has been deactivated due to repeated overdrafts.")
+            self.curr_user.active = False
 
-def find_account_by_id(account_id, accounts_list):
-    for acc in accounts_list:
-        if acc.id == account_id:
-            return acc
-    return None
+        self.curr_user.transactions.append(Transaction("Withdraw", amount, account_from=("Checking" if choice=="1" else "Savings")))
+        self.csv_handler.save_all(self.accounts)
+        print(f"${amount} withdrawn successfully." + (" Overdraft applied." if overdraft_occurred else ""))
 
+    def deposit(self):
+        if not self.curr_user:
+            return
+        print("Which account to deposit to?")
+        print("1. Checking")
+        print("2. Savings")
+        choice = input("Choose: ").strip()
 
+        if choice == "1" and self.curr_user.checking is None:
+            print("You don't have a Checking account.")
+            return
+        if choice == "2" and self.curr_user.savings is None:
+            print("You don't have a Savings account.")
+            return
+
+        amount = int(input("Enter amount to deposit: "))
+        if choice == "1":
+            self.curr_user.checking += amount
+        else:
+            self.curr_user.savings += amount
+
+        if not self.curr_user.active and ((self.curr_user.checking or 0) >= 0 and (self.curr_user.savings or 0) >= 0):
+            self.curr_user.active = True
+            self.curr_user.overdrafts = 0
+            print("✅ Your account has been reactivated.")
+
+        self.curr_user.transactions.append(Transaction("Deposit", amount, account_to=("Checking" if choice=="1" else "Savings")))
+        self.csv_handler.save_all(self.accounts)
+        print(f"${amount} deposited successfully.")
+
+    def transfer(self):
+        if not self.curr_user:
+            return
+        print("Transfer options:")
+        print("1. Between your own accounts")
+        print("2. To another user")
+        choice = input("Choose: ").strip()
+
+        if choice == "1":
+            if self.curr_user.checking is None or self.curr_user.savings is None:
+                print("You need both accounts to transfer between them.")
+                return
+            print("Transfer from:")
+            print("1. Checking to Savings")
+            print("2. Savings to Checking")
+            t_choice = input("Choose: ").strip()
+            amount = int(input("Enter amount: "))
+
+            if t_choice == "1":
+                if self.curr_user.checking - amount < -100:
+                    print("Cannot overdraw more than $100.")
+                    return
+                self.curr_user.checking -= amount
+                self.curr_user.savings += amount
+                self.curr_user.transactions.append(Transaction("Transfer", amount, "Checking", "Savings"))
+            elif t_choice == "2":
+                if self.curr_user.savings - amount < -100:
+                    print("Cannot overdraw more than $100.")
+                    return
+                self.curr_user.savings -= amount
+                self.curr_user.checking += amount
+                self.curr_user.transactions.append(Transaction("Transfer", amount, "Savings", "Checking"))
+            else:
+                print("Invalid choice.")
+                return
+
+            self.csv_handler.save_all(self.accounts)
+            print("Transfer successful.")
+
+        elif choice == "2":
+            target_id = int(input("Enter the ID of the user to transfer to: "))
+            target = self.find_id(target_id)
+            if not target:
+                print("User not found.")
+                return
+
+            print("Which of your accounts to transfer from?")
+            print("1. Checking")
+            print("2. Savings")
+            t_choice = input("Choose: ").strip()
+            amount = int(input("Enter amount: "))
+
+            if t_choice == "1":
+                if self.curr_user.checking is None:
+                    print("You don't have a Checking account.")
+                    return
+                if self.curr_user.checking - amount < -100:
+                    print("Cannot overdraw more than $100.")
+                    return
+            else:
+                if self.curr_user.savings is None:
+                    print("You don't have a Savings account.")
+                    return
+                if self.curr_user.savings - amount < -100:
+                    print("Cannot overdraw more than $100.")
+                    return
+
+            print("Which account of the recipient?")
+            print("1. Checking")
+            print("2. Savings")
+            r_choice = input("Choose: ").strip()
+
+            if r_choice == "1":
+                if target.checking is None:
+                    print("Recipient does not have a Checking account. Transfer cancelled.")
+                    return
+            else:
+                if target.savings is None:
+                    print("Recipient does not have a Savings account. Transfer cancelled.")
+                    return
+
+            if t_choice == "1":
+                self.curr_user.checking -= amount
+            else:
+                self.curr_user.savings -= amount
+
+            if r_choice == "1":
+                target.checking += amount
+            else:
+                target.savings += amount
+
+            self.curr_user.transactions.append(Transaction("Transfer", amount, "User", "Recipient"))
+            self.csv_handler.save_all(self.accounts)
+            print("Transfer to other user successful.")
+
+    def user_menu(self):
+        while True:
+            print("\nSelect an action:")
+            print("1. Show account balances")
+            print("2. Add missing account")
+            print("3. Withdraw")
+            print("4. Deposit")
+            print("5. Transfer")
+            print("6. Logout")
+            choice = input("Enter choice: ").strip()
+
+            if choice == "1":
+                self.show_account_info()
+            elif choice == "2":
+                self.add_missing_account()
+            elif choice == "3":
+                self.withdraw()
+            elif choice == "4":
+                self.deposit()
+            elif choice == "5":
+                self.transfer()
+            elif choice == "6":
+                print(f"Goodbye, {self.curr_user.first_name}!")
+                self.curr_user = None
+                break
+            else:
+                console.print("[bold red]Invalid choice. Please enter a number from 1 to 6.[/bold red]")
+
+# ---------------- Main ----------------
 if __name__ == "__main__":
+    csv_handler = CsvHandler(bank_Data)
+    bank = Bank(csv_handler)
 
-    accounts = load_accounts_from_csv(bank_Data)
+    print("Welcome to Green Bank!")
 
-    print(Style.BRIGHT + Back.GREEN +
-          "Hello, welcome to Green Bank!" + Style.RESET_ALL)
     while True:
-        user_Account = input(
-            Style.RESET_ALL + "Do you have an account in the bank? (Yes/No): ").strip().capitalize()
-        if user_Account == "Yes":
-            BankAccount(0, "", "", "").log_Account(accounts)
+        user_choice = input("Do you have an account? (Yes/No): ").strip().capitalize()
+        if user_choice == "Yes":
+            bank.sign_in()
             break
-        elif user_Account == "No":
-            new_acc = BankAccount(0, "", "", "").new_Account(accounts)
+        elif user_choice == "No":
+            new_acc = bank.create_account()
             if new_acc:
-                BankAccount(0, "", "", "").log_Account(accounts)
+                bank.sign_in()
             break
         else:
-            print("Please enter 'Yes' or 'No'.")
+            console.print("[bold red]Please enter Yes or No.[/bold red]")
