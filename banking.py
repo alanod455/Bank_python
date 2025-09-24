@@ -141,7 +141,7 @@ class Bank:
         response = input(
             "Would you like to create a new account? (Yes/No): ").strip().capitalize()
         if response != "Yes":
-            console.print("[bold]]Okay, See You Soon😓[/bold]")
+            console.print("[bold]Okay, See You Soon 😓[/bold]")
             return None
 
         first_name = console.input(
