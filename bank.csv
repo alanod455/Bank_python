@@ -1,4 +1,6 @@
 id,first_name,last_name,password,checking,savings,overdrafts,active
-10001,Alanoud,Almarshad,12345,1000,None,0,True
-10002,Sarah,Almusalam,aa1234,100,10,0,True
-10003,Ahmad,Alenezi,00000,None,45,0,True
+10001,Alanoud,Almarshad,12411,None,200,0,True
+10002,Manal ,Alenezi,12345,None,800,0,True
+10003,Sarah,Almusalam,00000,80,90,0,True
+10004,Halah,Alshahrany,11223344,90000,None,0,True
+10005,Hala ,Aalaunes,9999,None,200,0,True

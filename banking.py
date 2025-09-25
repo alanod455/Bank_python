@@ -113,17 +113,35 @@ class Bank:
             account = self.find_id(account_id)
 
             if account and account.password == password:
-                if not account.active:
-                    console.print(
-                        "[red]Your account is deactivated due to overdraft. Please deposit funds to reactivate.[/red]")
                 self.curr_user = account
+
+                if not account.active:
+                    inactive_accounts = []
+                    if account.checking is not None and account.checking < 0:
+                        inactive_accounts.append("checking")
+                    if account.savings is not None and account.savings < 0:
+                        inactive_accounts.append("savings")
+
+                    if inactive_accounts:
+                        account_types = " and ".join(inactive_accounts)
+                        console.print(
+                            f"[red]Account:[bold]{account_types}[/bold] deactivated."
+                            "Please deposit funds to reactivate.[/red]"
+                        )
+                    else:
+                        console.print(
+                            "[red]Your account is deactivated.[/red]"
+                        )
+
                 console.print(
-                    f"Login successful. Welcome[bold] {account.first_name} {account.last_name}[/bold]✨")
+                    f"Login successful. Welcome [bold]{account.first_name} {account.last_name}[/bold] ✨"
+                )
                 self.user_menu()
                 return
             else:
                 console.print(
-                    "[bold red]Wrong ID or password. Please try again.[/bold red]")
+                    "[bold red]Wrong ID or password. Please try again.[/bold red]"
+                )
 
     def show_account_info(self):
         print("\nYour account balances:")
@@ -137,17 +155,36 @@ class Bank:
             print("Savings: Not created yet")
         print("")
 
+    def get_valid_amount(self,prompt):
+        while True:
+            try:
+                amount = float(input(prompt))
+                if amount >= 0:
+                    return amount
+                else:
+                    console.print(
+                        "[bold red]Amount must be non-negative.[/bold red]")
+            except ValueError:
+                console.print(
+                    "[bold red]Please enter a valid number.[/bold red]")
+
     def create_account(self):
-        response = input(
-            "Would you like to create a new account? (Yes/No): ").strip().capitalize()
-        if response != "Yes":
+        while True:
+            response = input(
+                "Would you like to create a new account? (Yes/No): ").strip().capitalize()
+            if response in ["Yes", "No"]:
+                break
+            console.print("[bold red]Please enter Yes or No.[/bold red]")
+
+        if response == "No":
             console.print("[bold]Okay, See You Soon 😓[/bold]")
             return None
 
         first_name = console.input(
-            "Please enter your [bold]First name:[/bold] ")
-        last_name = console.input("Please enter your [bold]Last name:[/bold]")
-        password = console.input("Enter [bold]password:[/bold] ")
+            "Please enter your [bold]First name:[/bold] ").strip()
+        last_name = console.input(
+            "Please enter your [bold]Last name:[/bold] ").strip()
+        password = console.input("Enter [bold]password:[/bold] ").strip()
 
         print("Select account type to create:")
         print("1. Checking")
@@ -162,12 +199,12 @@ class Bank:
 
         checking, savings = None, None
         if account_type == "1":
-            checking = int(input("Enter initial deposit for Checking: "))
+            checking = self.get_valid_amount("Enter initial deposit for Checking: ")
         elif account_type == "2":
-            savings = int(input("Enter initial deposit for Savings: "))
+            savings = self.get_valid_amount("Enter initial deposit for Savings: ")
         elif account_type == "3":
-            checking = int(input("Enter initial deposit for Checking: "))
-            savings = int(input("Enter initial deposit for Savings: "))
+            checking = self.get_valid_amount("Enter initial deposit for Checking: ")
+            savings = self.get_valid_amount("Enter initial deposit for Savings: ")
 
         for step in track(range(10), description="[bold green]Creating your Account[/bold green]"):
             time.sleep(0.2)
@@ -179,7 +216,7 @@ class Bank:
         self.csv_handler.save_all(self.accounts)
 
         console.print(
-            f"Account created for {first_name} {last_name}. [bold green] Your ID to log in is: {new_id} [bold green]")
+            f"Account created for {first_name} {last_name}. [bold green]Your ID to log in is: {new_id}[/bold green]")
         return new_account
 
     def add_missing_account(self):
@@ -194,7 +231,8 @@ class Bank:
             options["2"] = "Savings"
 
         if not options:
-            console.print("[bold]]You already have both Checking and Savings accounts.[/bold]")
+            console.print(
+                "[bold]You already have both Checking and Savings accounts.[/bold]")
             return
 
         print("You can create the following missing account(s):")
@@ -222,6 +260,7 @@ class Bank:
             return
         print("Which account to withdraw from?")
         print("1. Checking")
+
         print("2. Savings")
         while True:
             choice = input("Choose: ").strip()
@@ -235,15 +274,16 @@ class Bank:
             print("You don't have a Savings account.")
             return
         while True:
-          raw_amount = input("How much do you want to withdraw? ").strip()
-          if not raw_amount.isdigit():
-             console.print("[bold red]Amount must be a valid number.[/bold red]")
-             continue
-          amount = int(raw_amount)
-          if amount <= 0:
-             console.print("[bold red]Amount must be positive.[/bold red]")
-             continue
-          break
+            raw_amount = input("How much do you want to withdraw? ").strip()
+            if not raw_amount.isdigit():
+                console.print(
+                    "[bold red]Amount must be a valid number.[/bold red]")
+                continue
+            amount = int(raw_amount)
+            if amount <= 0:
+                console.print("[bold red]Amount must be positive.[/bold red]")
+                continue
+            break
         if amount > 100:
             console.print(
                 "[bold]Cannot withdraw more than $100 in one transaction.[/bold]")
@@ -313,15 +353,16 @@ class Bank:
             return
 
         while True:
-           raw_amount = input("Enter amount to deposit: ").strip()
-           if not raw_amount.isdigit():
-               console.print("[bold red]Amount must be a valid number.[/bold red]")
-               continue
-           amount = int(raw_amount)
-           if amount <= 0:
-             console.print("[bold red]Amount must be positive.[/bold red]")
-             continue
-           break
+            raw_amount = input("Enter amount to deposit: ").strip()
+            if not raw_amount.isdigit():
+                console.print(
+                    "[bold red]Amount must be a valid number.[/bold red]")
+                continue
+            amount = int(raw_amount)
+            if amount <= 0:
+                console.print("[bold red]Amount must be positive.[/bold red]")
+                continue
+            break
         if choice == "1":
             self.curr_user.checking += amount
         else:
@@ -357,21 +398,23 @@ class Bank:
             print("1. Checking to Savings")
             print("2. Savings to Checking")
             while True:
-                 t_choice = input("Choose: ").strip()
-                 if t_choice in ["1", "2"]:
-                     break
-                 console.print("[bold red]Please select 1 or 2.[/bold red]")
+                t_choice = input("Choose: ").strip()
+                if t_choice in ["1", "2"]:
+                    break
+                console.print("[bold red]Please select 1 or 2.[/bold red]")
             while True:
-               raw_amount = input("Enter amount: ").strip()
-               if not raw_amount.isdigit():
-                  console.print("[bold red]Amount must be a valid number.[/bold red]")
-                  continue
-               amount = int(raw_amount)
-               if amount <= 0:
-                   console.print("[bold red]Amount must be positive.[/bold red]")
-                   continue
-               break
-               
+                raw_amount = input("Enter amount: ").strip()
+                if not raw_amount.isdigit():
+                    console.print(
+                        "[bold red]Amount must be a valid number.[/bold red]")
+                    continue
+                amount = int(raw_amount)
+                if amount <= 0:
+                    console.print(
+                        "[bold red]Amount must be positive.[/bold red]")
+                    continue
+                break
+
             if t_choice == "1":
                 if self.curr_user.checking - amount < -100:
                     print("Cannot overdraw more than $100.")
@@ -397,11 +440,13 @@ class Bank:
 
         elif choice == "2":
             while True:
-              raw_id = console.input("Enter the [bold green]user ID[/bold green] to transfer to: ").strip()
-              if raw_id.isdigit():
-                 target_id = int(raw_id)
-                 break
-              console.print("[bold red]User ID must be a valid number only.[/bold red]")
+                raw_id = console.input(
+                    "Enter the [bold green]user ID[/bold green] to transfer to: ").strip()
+                if raw_id.isdigit():
+                    target_id = int(raw_id)
+                    break
+                console.print(
+                    "[bold red]User ID must be a valid number only.[/bold red]")
             target = self.find_id(target_id)
             if not target:
                 print("User not found.")
@@ -411,19 +456,21 @@ class Bank:
             print("1. Checking")
             print("2. Savings")
             while True:
-              t_choice = input("Choose: ").strip()
-              if t_choice in ["1", "2"]:
-                  break
-              console.print("[bold red]Please select 1 or 2.[/bold red]")
+                t_choice = input("Choose: ").strip()
+                if t_choice in ["1", "2"]:
+                    break
+                console.print("[bold red]Please select 1 or 2.[/bold red]")
             while True:
-               try:
-                  amount = int(input("Enter amount: "))
-                  if amount <= 0:
-                    console.print("[bold red]Amount must be positive.[/bold red]")
-                    continue
-                  break
-               except ValueError:
-                  console.print("[bold red]Please enter a valid number.[/bold red]")
+                try:
+                    amount = int(input("Enter amount: "))
+                    if amount <= 0:
+                        console.print(
+                            "[bold red]Amount must be positive.[/bold red]")
+                        continue
+                    break
+                except ValueError:
+                    console.print(
+                        "[bold red]Please enter a valid number.[/bold red]")
 
             if t_choice == "1":
                 if self.curr_user.checking is None:
@@ -450,7 +497,7 @@ class Bank:
             while True:
                 r_choice = input("Choose: ").strip()
                 if r_choice in ["1", "2"]:
-                       break
+                    break
                 console.print("[bold red]Please select 1 or 2.[/bold red]")
             if r_choice == "1":
                 if target.checking is None:
@@ -478,15 +525,35 @@ class Bank:
             self.csv_handler.save_all(self.accounts)
             console.print("Transfer to other user [bold]successful.[/bold]")
 
+# Allow a user to view their entire transaction log-----------------------------------------BONUS
+
+    def view_all_transaction(self):
+        if not self.curr_user:
+            console.print(
+                "[bold red]No user is currently logged in.[/bold red]")
+            return
+
+        if not self.curr_user.transactions:
+            console.print(
+                "[bold]No transactions have been recorded yet.[/bold ]")
+            return
+
+        console.print(
+            f"\n[bold green]Transaction log for {self.curr_user.first_name} {self.curr_user.last_name}:[/bold green]")
+        for i, txn in enumerate(self.curr_user.transactions, start=1):
+            console.print(
+                f"[bold]{i}. Type:{txn.type}, Balense:${txn.amount},From:{txn.account_from}, To:{txn.account_to}[/bold]")
+
     def user_menu(self):
         while True:
-            console.print("\n[bold]Select an action:[/bold]")
+            console.print("\n[bold]What do you like to do today 🏦:[/bold]")
             print("1. Show account balances")
             print("2. Add missing account")
             print("3. Withdraw")
             print("4. Deposit")
             print("5. Transfer")
-            print("6. Logout")
+            print("6. View all transaction")
+            print("7. Logout")
             choice = input("Enter choice: ").strip()
 
             if choice == "1":
@@ -500,6 +567,8 @@ class Bank:
             elif choice == "5":
                 self.transfer()
             elif choice == "6":
+                self. view_all_transaction()
+            elif choice == "7":
                 console.print(
                     f"See you later,[bold] {self.curr_user.first_name} {self.curr_user.last_name}[/bold]✨")
                 self.curr_user = None
