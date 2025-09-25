@@ -155,7 +155,7 @@ class Bank:
             print("Savings: Not created yet")
         print("")
 
-    def get_valid_amount(self,prompt):
+    def get_valid_amount(self, prompt):
         while True:
             try:
                 amount = float(input(prompt))
@@ -199,13 +199,18 @@ class Bank:
 
         checking, savings = None, None
         if account_type == "1":
-            checking = self.get_valid_amount("Enter initial deposit for Checking: ")
+            checking = self.get_valid_amount(
+                "Enter initial deposit for Checking: ")
         elif account_type == "2":
-            savings = self.get_valid_amount("Enter initial deposit for Savings: ")
+            savings = self.get_valid_amount(
+                "Enter initial deposit for Savings: ")
         elif account_type == "3":
-            checking = self.get_valid_amount("Enter initial deposit for Checking: ")
-            savings = self.get_valid_amount("Enter initial deposit for Savings: ")
-
+            checking = self.get_valid_amount(
+                "Enter initial deposit for Checking: ")
+            savings = self.get_valid_amount(
+                "Enter initial deposit for Savings: ")
+            
+#Loding 2s------------------------------------------------------------
         for step in track(range(10), description="[bold green]Creating your Account[/bold green]"):
             time.sleep(0.2)
 
@@ -260,7 +265,6 @@ class Bank:
             return
         print("Which account to withdraw from?")
         print("1. Checking")
-
         print("2. Savings")
         while True:
             choice = input("Choose: ").strip()
@@ -543,6 +547,7 @@ class Bank:
         for i, txn in enumerate(self.curr_user.transactions, start=1):
             console.print(
                 f"[bold]{i}. Type:{txn.type}, Balense:${txn.amount},From:{txn.account_from}, To:{txn.account_to}[/bold]")
+# -----------------------------------------
 
     def user_menu(self):
         while True:
